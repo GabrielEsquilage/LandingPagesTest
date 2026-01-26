@@ -29,14 +29,18 @@ jobs:
         run: yarn install
 
       - name: Run Production Tests
+        id: run_tests
         env:
           TERM: xterm
         run: yarn cypress run --spec "cypress/e2e/lps_producao_autmoatic_test/**/*.cy.js"
+        continue-on-error: true
 
       - name: Generate Report
+        if: always()
         run: yarn report:make
 
       - name: Upload Report Artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cypress-report-prod
@@ -59,6 +63,10 @@ jobs:
           path: cypress/videos
           if-no-files-found: ignore
 
+      - name: Check test status
+        if: steps.run_tests.outcome == 'failure'
+        run: exit 1
+
   staging-tests:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -75,14 +83,18 @@ jobs:
         run: yarn install
 
       - name: Run Staging Tests
+        id: run_tests
         env:
           TERM: xterm
         run: yarn cypress run --spec "cypress/e2e/lp/**/*.cy.js"
+        continue-on-error: true
 
       - name: Generate Report
+        if: always()
         run: yarn report:make
 
       - name: Upload Report Artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cypress-report-staging
@@ -104,3 +116,7 @@ jobs:
           name: cypress-videos-staging
           path: cypress/videos
           if-no-files-found: ignore
+
+      - name: Check test status
+        if: steps.run_tests.outcome == 'failure'
+        run: exit 1
