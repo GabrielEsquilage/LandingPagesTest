@@ -8,12 +8,14 @@ on:
   pull_request:
     branches: [ main ]
   schedule:
-    - cron: '0 9 * * *' # 09:00 AM UTC
-    - cron: '0 15 * * *' # 03:00 PM UTC
-    - cron: '50 23 * * *' # 11:50 PM UTC
+    - cron: '0 9 * * *' # 09:00 AM BRT
+    - cron: '0 15 * * *' # 03:00 PM BRT
+    - cron: '50 23 * * *' # 11:50 PM BRT
+    timezone: 'America/Sao_Paulo'
 
 jobs:
-  cypress-run:
+  production-tests:
+    if: github.event_name == 'push' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -28,18 +30,15 @@ jobs:
         run: yarn install
 
       - name: Run Production Tests
-        run: yarn cypress run --spec "cypress/e2e/lps_producao_autmoatic_test/**/*.cy.js" || true
+        run: yarn cypress run --spec "cypress/e2e/lps_producao_autmoatic_test/**/*.cy.js"
 
-      - name: Run Staging Tests
-        run: yarn cypress run --spec "cypress/e2e/lp/**/*.cy.js" || true
-      
       - name: Generate Report
         run: yarn report:make
 
       - name: Upload Report Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cypress-report
+          name: cypress-report-prod
           path: final-report
           if-no-files-found: error
 
@@ -47,7 +46,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: cypress-screenshots
+          name: cypress-screenshots-prod
           path: cypress/screenshots
           if-no-files-found: ignore
 
@@ -55,6 +54,50 @@ jobs:
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: cypress-videos
+          name: cypress-videos-prod
+          path: cypress/videos
+          if-no-files-found: ignore
+
+  staging-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Run Staging Tests
+        run: yarn cypress run --spec "cypress/e2e/lp/**/*.cy.js"
+
+      - name: Generate Report
+        run: yarn report:make
+
+      - name: Upload Report Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-report-staging
+          path: final-report
+          if-no-files-found: error
+
+      - name: Upload Screenshots on Failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cypress-screenshots-staging
+          path: cypress/screenshots
+          if-no-files-found: ignore
+
+      - name: Upload Videos on Failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cypress-videos-staging
           path: cypress/videos
           if-no-files-found: ignore
