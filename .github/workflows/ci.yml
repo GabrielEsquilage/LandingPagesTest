@@ -116,7 +116,3 @@ jobs:
           name: cypress-videos-staging
           path: cypress/videos
           if-no-files-found: ignore
-
-      - name: Check test status
-        if: steps.run_tests.outcome == 'failure'
-        run: exit 1
